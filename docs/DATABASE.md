@@ -640,3 +640,62 @@ reserve_pool_timeout = 3
 server_lifetime = 3600
 server_idle_timeout = 600
 ```
+
+## ☁️ Google Cloud Spanner Schema
+
+### Income Transactions Table (txs)
+
+Таблиця для зберігання транзакцій надходжень в Google Cloud Spanner.
+
+```sql
+-- Створення таблиці для транзакцій надходжень
+CREATE TABLE txs (
+    income_id STRING(36) NOT NULL,
+    income_name STRING(255),
+    income_amount NUMERIC,
+    income_type STRING(50),
+    income_date TIMESTAMP,
+    created_at TIMESTAMP OPTIONS (allow_commit_timestamp=true)
+) PRIMARY KEY (income_id);
+```
+
+### Indexes for Income Transactions
+
+```sql
+-- Індекс для пошуку за датою надходження
+CREATE INDEX idx_income_date ON txs(income_date);
+
+-- Індекс для пошуку за типом надходження
+CREATE INDEX idx_income_type ON txs(income_type);
+
+-- Композитний індекс для пошуку за типом і датою
+CREATE INDEX idx_income_type_date ON txs(income_type, income_date);
+```
+
+### Особливості Google Cloud Spanner
+
+- **income_id**: STRING(36) для UUID або унікального ідентифікатора транзакції
+- **income_amount**: NUMERIC для точних грошових розрахунків без проблем з округленням
+- **created_at**: Використовує `allow_commit_timestamp=true` для автоматичного встановлення часу створення
+- **PRIMARY KEY**: Обов'язковий для всіх таблиць в Spanner
+
+### Приклади запитів
+
+```sql
+-- Вибірка всіх надходжень за певний період
+SELECT * FROM txs
+WHERE income_date >= @start_date
+  AND income_date <= @end_date
+ORDER BY income_date DESC;
+
+-- Підрахунок загальної суми надходжень за типом
+SELECT income_type, SUM(income_amount) as total
+FROM txs
+WHERE income_date >= @start_date
+GROUP BY income_type;
+
+-- Останні 10 транзакцій
+SELECT * FROM txs
+ORDER BY income_date DESC
+LIMIT 10;
+```
